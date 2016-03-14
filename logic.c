@@ -1,5 +1,5 @@
 /* 
-	gcc -pedantic -W -Wall -o app Test.c
+	gcc -pedantic -W -Wall logic.c -lm -o app
 	./app
 */
 
@@ -10,9 +10,29 @@
 #include <sys/stat.h>    
 #include <sys/types.h>    
 #include <unistd.h>
-    
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+char webpage[] = 
+"HTTP/1.1 200 OK\r\n"
+"Content-Type: text/html; charset=UTF-8\r\n\r\n"
+"<!DOCTYPE html>\r\n"
+"<html>"
+	"<body>"
+		"<img src='/images/image.jpg'/>"
+		"<H1>Hello world</H1>"
+	"</body>"
+"</html>";
+
 int main() 
 {
+/*
+    int x,y,n;
+    unsigned char *data = stbi_load("image.jpg", &x, &y, &n, 0);
+    printf("X = %d - Y = %d - N = %d\n", x, y, n);
+    printf("%s\n", data);
+    stbi_image_free(data);
+*/
    int create_socket, new_socket;    
    socklen_t addrlen;    
    int bufsize = 1024;    
@@ -55,10 +75,7 @@ int main()
 
 		recv(new_socket, buffer, bufsize, 0);    
 		printf("%s\n", buffer);    
-		write(new_socket, "HTTP/1.1 200 OK\n", 16);
-		write(new_socket, "Content-length: 46\n", 19);
-		write(new_socket, "Content-Type: text/html\n\n", 25);
-		write(new_socket, "<html><body><H1>Hello world</H1></body></html>",46);      
+      	write(new_socket, webpage, sizeof(webpage) - 1);
 		close(new_socket);
    }    
    close(create_socket);    
