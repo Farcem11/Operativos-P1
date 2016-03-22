@@ -1,8 +1,10 @@
-/* 
-	gcc -pedantic -W -Wall logic.c -lm -o app
-	./app
-*/
+/*
+Para ejecutar:
 
+$ gcc -W -Wall logic.c -lm -o app
+$ ./app
+
+*/
 #include <netinet/in.h>    
 #include <stdio.h>    
 #include <stdlib.h>    
@@ -15,30 +17,31 @@
 
 char webpage[] = 
 "HTTP/1.1 200 OK\r\n"
-"Content-Type: text/html; charset=UTF-8\r\n\r\n"
-"<!DOCTYPE html>\r\n"
-"<html>"
-	"<body>"
-		"<img src='/images/image.jpg'/>"
-		"<H1>Hello world</H1>"
-	"</body>"
-"</html>";
+"Content-Type: image/jpeg\r\n"
+"Connection: close\r\n\r\n";
 
 int main() 
 {
-/*
-    int x,y,n;
-    unsigned char *data = stbi_load("image.jpg", &x, &y, &n, 0);
-    printf("X = %d - Y = %d - N = %d\n", x, y, n);
-    printf("%s\n", data);
-    stbi_image_free(data);
-*/
    int create_socket, new_socket;    
    socklen_t addrlen;    
    int bufsize = 1024;    
-   char *buffer = malloc(bufsize);    
+    char *buffer = malloc(bufsize);
    struct sockaddr_in address;    
- 
+
+  FILE *fp;
+
+    unsigned long fileLen;
+    unsigned char *imageData;
+
+    fp = fopen("image.jpg","rb");
+    fseek(fp, 0, SEEK_END);
+    fileLen=ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    imageData=(unsigned char *)malloc(fileLen);
+    fread(imageData,1,fileLen,fp);
+
+    fclose(fp);
+
    if ((create_socket = socket(AF_INET, SOCK_STREAM, 0)) > 0)
    {    
       printf("The socket was created\n");
@@ -76,8 +79,11 @@ int main()
 		recv(new_socket, buffer, bufsize, 0);    
 		printf("%s\n", buffer);    
       	write(new_socket, webpage, sizeof(webpage) - 1);
+      	write (new_socket, imageData, fileLen);
 		close(new_socket);
    }    
-   close(create_socket);    
+   close(create_socket);
+   free(buffer);
+   free(imageData); 
    return 0;    
 }
