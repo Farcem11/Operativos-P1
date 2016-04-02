@@ -77,7 +77,7 @@ int main()
 	FILE *file;
 
 	unsigned long fileLen;
-	unsigned char* imageData = calloc(5000000, sizeof(unsigned char));
+	unsigned char* imageData = calloc(20*1024*1024, sizeof(unsigned char)); //20 mbs maximo
 
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     memset(&serv_addr, '\0', sizeof(serv_addr));
