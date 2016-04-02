@@ -63,6 +63,7 @@ void getHttpHeaderType(char *pFileName, int* connfd)
 
 int main()
 {
+	int Mbs = 20*1024*1024; //20 mbs maximo
     int listenfd = 0; 
     int connfd = 0;
     char filePath[125];
@@ -77,7 +78,7 @@ int main()
 	FILE *file;
 
 	unsigned long fileLen;
-	unsigned char* imageData = calloc(20*1024*1024, sizeof(unsigned char)); //20 mbs maximo
+	unsigned char* imageData = calloc(Mbs, sizeof(unsigned char));
 
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     memset(&serv_addr, '\0', sizeof(serv_addr));
@@ -182,7 +183,7 @@ int main()
 	        }
 		}
 		close(connfd);
-		memset(imageData, '\0', 5000000);
+		memset(imageData, '\0', Mbs);
 		memset(filePath, '\0', sizeof(filePath)); 
 		memset(sendBuff, '\0', sizeof(sendBuff)); 
         sleep(1);
