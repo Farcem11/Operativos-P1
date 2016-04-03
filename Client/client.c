@@ -49,7 +49,7 @@ int main(int argc,char *argv[])
     serv_addr.sin_addr.s_addr = inet_addr(ipToAddress); //"127.0.0.1"
 
     //Attempt a connection
-    if(connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr))<0)
+    if(connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
         printf("\n Error: Connect Failed \n");
         return 1;
@@ -58,7 +58,7 @@ int main(int argc,char *argv[])
     //Envia nombre del archivo
     bzero(recvBuff,256);
     bzero(confirmBuff,32);
-    strcpy(recvBuff, "client ");
+    strcpy(recvBuff, "/client ");
     printf("%s\n", fileNameRetrieve);
     strcat(recvBuff, fileNameRetrieve);
 
