@@ -18,7 +18,8 @@
 #include <pthread.h>
 
 int Mbs = 20*1024*1024; //20 mbs maximo
-int listenfd = 0; 
+int listenfd = 0;
+
 
 char* getFileExtension(char *pFileName) 
 {
@@ -48,12 +49,11 @@ char* getSubStringRight(char* str, char* delimiter)
 
 void getHttpHeaderType(char *pFileName, int* connfd)
 {
-
 	if (strcmp(getFileExtension(pFileName), "html") == 0)
 	{
 		write(*connfd, "text/html\r\n", strlen("text/html\r\n"));
 	}
-	else if (strcmp(getFileExtension(pFileName), "jpg") == 0)
+	else if (strcmp(getFileExtension(pFileName), "jpg") == 0 || strcmp(getFileExtension(pFileName), "jpeg") == 0)
 	{
 		write(*connfd, "image/jpeg\r\n", strlen("image/jpeg\r\n"));
 	}
@@ -74,16 +74,15 @@ void getHttpHeaderType(char *pFileName, int* connfd)
 void* connection_handler(void* socket_desc)
 {
     int connfd = *(int*)socket_desc;
-
+	unsigned char* imageData = calloc(Mbs, sizeof(unsigned char));
 	char sendBuff[2048];
-    memset(sendBuff, '\0', sizeof(sendBuff)); 
-
+	char filePath[125];
 	recv(connfd, sendBuff, sizeof(sendBuff), 0);
 
 	char* fileNameFromBrowser = calloc(1025, sizeof(char));
 
-	fileNameFromBrowser = getSubStringRight(sendBuff,"/");
-	fileNameFromBrowser = getSubStringLeft(fileNameFromBrowser," ");
+
+	fileNameFromBrowser = getSubStringLeft(getSubStringRight(sendBuff,"/"), " ");
 
 	if(strcmp(fileNameFromBrowser, "client") != 0)
 		printf("Se creo un nuevo thread para responder la solicitud del archivo: %s\n", fileNameFromBrowser);
@@ -95,7 +94,6 @@ void* connection_handler(void* socket_desc)
 		if(strcmp(getSubStringLeft(sendBuff," "), "/client") != 0)
 		{
 			//Browser
-			char filePath[125] = {0};
 
 			strcpy(filePath, "Files/");
 			strcat(filePath, fileNameFromBrowser);
@@ -120,13 +118,10 @@ void* connection_handler(void* socket_desc)
 			
 				fseek(file, 0, SEEK_SET);
 				
-				unsigned char* imageData = calloc(Mbs, sizeof(unsigned char));
-				
 				fread(imageData,1,fileLen,file);
 
 			  	write(connfd, imageData, fileLen);
-		  		free(imageData);
-		  		imageData = NULL;
+		  		
 				fclose(file);
 			}
 			else
@@ -145,35 +140,29 @@ void* connection_handler(void* socket_desc)
 				unsigned long fileLen = ftell(file);
 				fseek(file, 0, SEEK_SET);
 				
-				unsigned char* imageData = calloc(Mbs, sizeof(unsigned char));
-				
 				fread(imageData,1,fileLen,file);
 			  	
 			  	write(connfd, imageData, fileLen);
 
-		  		free(imageData);
-		  		imageData = NULL;
 		  		fclose(file);
 			}
 		}
 		else
 		{
 			//Client
-			char filePath[125] = {0};
-			char confirmBuff[32] = {0};
+
+			char confirmBuff[32];
 			unsigned char buff[256] = {0};
 
-			char* fileNameFromClient = calloc(1025, sizeof(char));
-			fileNameFromClient = getSubStringRight(sendBuff," ");
+			char* fileNameFromClient = getSubStringRight(sendBuff," ");
 	        //Receive file name
 			
 			strcpy(filePath, "Files/");
 	        strcat(filePath, fileNameFromClient);
-        	free(fileNameFromClient);
-        	fileNameFromClient = NULL;
+
 
 	        //Open the file that we wish to transfer
-	        FILE* fp;
+	        
 	        if( access(filePath, F_OK) == -1 )
 	        {
 	            printf("Error opening file. File does not exist\n");
@@ -182,11 +171,14 @@ void* connection_handler(void* socket_desc)
 	        }
 	        else
 	        {
-	        	fp = fopen(filePath,"rb");
+	        	
+	        	FILE* fp = fopen(filePath,"rb");
+	            
 	            strcpy(confirmBuff, "0");
 
 	            write(connfd,confirmBuff,sizeof(confirmBuff));
 	            //Read data from file and send it
+
 	            while(1)
 	            {
 	                //First read file in chunks of 256 bytes

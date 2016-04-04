@@ -43,7 +43,7 @@ void getHttpHeaderType(char *pFileName, int* connfd)
 	{
 		write(*connfd, "text/html\r\n", strlen("text/html\r\n"));
 	}
-	else if (strcmp(getFileExtension(pFileName), "jpg") == 0)
+	else if (strcmp(getFileExtension(pFileName), "jpg") == 0 || strcmp(getFileExtension(pFileName), "jpeg") == 0)
 	{
 		write(*connfd, "image/jpeg\r\n", strlen("image/jpeg\r\n"));
 	}
