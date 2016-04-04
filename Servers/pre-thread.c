@@ -5,6 +5,10 @@
 #include <pthread.h>
 
 void *print_message_function( void *ptr );
+void threadChecker(pthread_t *threadListToCheck);
+
+int threadsWorking = 0;
+int numberOfThreads;
 
 int main(int argc, char *argv[])
 {
@@ -16,8 +20,10 @@ int main(int argc, char *argv[])
     	return 1;
     }
 
-    int numberOfThreads = atoi(argv[1]);
+    numberOfThreads = atoi(argv[1]);
     pthread_t *threadList[numberOfThreads];
+
+    bzero(threadList, sizeof(numberOfThreads));
 
     //Assign thread on list
     for(int threadCount = 0; threadCount < numberOfThreads; threadCount++){
@@ -42,26 +48,7 @@ int main(int argc, char *argv[])
      			return 1;
      		}
      		printf("Thread no %d created\n", threadCount);
-     		break;
-		}
-    }
-
-    //Another creator for testing
-    for (int threadCount = 0; threadCount < numberOfThreads; threadCount++)
-    {
-     	if(pthread_kill(threadList[threadCount], 0) == 0)
-		{
-    		printf("Thread %d occupied. Moving to thread %d\n", threadCount, threadCount+1);
-		}
-		else 
-		{
-			iret = pthread_create( &threadList[threadCount], NULL, print_message_function, "Thread ready!");
-			if(iret)
-     		{
-     			fprintf(stderr,"Error - pthread_create() return code: %d\n",iret);
-     			return 1;
-     		}
-     		printf("Thread no %d created\n", threadCount);
+            threadsWorking++;
      		break;
 		}
     }
@@ -72,18 +59,7 @@ int main(int argc, char *argv[])
 
     //Stopping dead threads
     while(1){
-    	for (int threadCount = 0; threadCount < numberOfThreads; threadCount++)
-    	{
-     		if(pthread_kill(threadList[threadCount], 0) == 0)
-			{
-    			printf("Thread no %d is still running. Can't join now\n", threadCount);
-			}
-			else 
-			{
-				pthread_join(threadList[threadCount], NULL);
-				printf("Thread no %d is stopped\n", threadCount);
-			}
-    	}
+        threadChecker(threadList);	
     }
     
 
@@ -95,10 +71,24 @@ void *print_message_function( void *ptr )
      char *message;
      message = (char *) ptr;
      printf("%s \n", message);
-     long int i = 0;
-     while(i < 9999999){
-     	i++;
-     }
-     printf("Dickbutt 1\n");
 }
 
+//Checks if there are threads working, in case there is any active ones 
+void threadChecker(pthread_t *threadListToCheck)
+{
+    while(threadsWorking != 0){
+        for (int threadCount = 0; threadCount < numberOfThreads; threadCount++)
+        {
+            if(pthread_kill(threadListToCheck[threadCount], 0) == 0)
+            {
+                printf("Thread no %d is still running. Can't join now\n", threadCount);
+            }
+            else 
+            {
+                pthread_join(threadListToCheck[threadCount], NULL);
+                printf("Thread no %d is stopped\n", threadCount);
+                threadsWorking--;
+            }
+        }
+    }
+}
