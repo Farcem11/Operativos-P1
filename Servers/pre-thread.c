@@ -262,10 +262,9 @@ int main(int argc, char *argv[])
     while(1)
     {
     	int connfd = accept(listenfd, (struct sockaddr*)&serv_addr, &serv_len);
-
     	for (int threadCount = 0; threadCount < numberOfThreads; threadCount++)
-	    {
-	        if(pthread_kill(threadList[threadCount], 0) == 0)
+    	{
+    		if(pthread_kill(threadList[threadCount], 0) == 0)
 	        {
 	            printf("Thread no %d is still running.\n", threadCount);
 	        }
@@ -275,10 +274,10 @@ int main(int argc, char *argv[])
 	            threadActiveList[threadCount] = 0;
 	            printf("Thread no %d is waiting.\n", threadCount);
 	        }
-	    }
-
-		for (int threadCount = 0; threadCount < numberOfThreads; threadCount++)
-	    {
+    	}
+    	
+    	for (int threadCount = 0; threadCount < numberOfThreads; threadCount++)
+    	{
 	        //Thread occupied
 	        if(threadList[threadCount] == 0)
 	        {
@@ -297,7 +296,7 @@ int main(int argc, char *argv[])
 	            threadActiveList[threadCount] = 1;
 	            break;
 	        }
-	    }    
+    	}    
     }
     return 1;
 }
