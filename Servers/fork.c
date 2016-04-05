@@ -74,18 +74,18 @@ int main()
     int listenfd = 0; 
     int connfd = 0;
     char filePath[125];
-    struct sockaddr_in serv_addr; 
     char sendBuff[2048];
     char confirmBuff[32];
     unsigned char buff[256] = {0};
-    socklen_t serv_len;
+	unsigned long fileLen;
+	unsigned char* imageData = calloc(Mbs, sizeof(unsigned char));
     char* fileNameFromBrowser = calloc(1025, sizeof(char));
     char* fileNameFromClient =  calloc(1025, sizeof(char));
 
+    socklen_t serv_len;
+    struct sockaddr_in serv_addr; 
 	FILE *file;
 
-	unsigned long fileLen;
-	unsigned char* imageData = calloc(Mbs, sizeof(unsigned char));
 
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     memset(&serv_addr, '\0', sizeof(serv_addr));
