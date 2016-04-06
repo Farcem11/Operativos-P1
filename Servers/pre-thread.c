@@ -26,7 +26,6 @@ int numberOfThreads;
 int availableThreads[100] = {0};
 pthread_t threads[100];
 
-
 int stringToInt(char* pString)
 {
     return (int) strtol(pString, (char **)NULL, 10);
@@ -43,7 +42,6 @@ int threadChecker()
     }
     return -1;
 }
-
 
 char* getFileExtension(char *pFileName) 
 {
