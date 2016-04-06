@@ -92,13 +92,11 @@ void* connection_handler(void* socket_desc)
 		unsigned char* imageData = (unsigned char*)calloc(256, sizeof(unsigned char));
 		char* fileNameFromClient = calloc(256, sizeof(char));
 		char filePath[125] = {0};
-		char confirmBuff[32] = {0};
 		unsigned char buff[256] = {0};
 		
 		if(strcmp(getSubStringLeft(sendBuff," "), "/client") != 0)
 		{
 			//Browser
-
 			strcpy(filePath, "Files/");
 			strcat(filePath, fileNameFromBrowser);
 			FILE* file;
@@ -183,15 +181,11 @@ void* connection_handler(void* socket_desc)
 	        if( access(filePath, F_OK) == -1 )
 	        {
 	            printf("Error opening file. File does not exist\n");
-	            strcpy(confirmBuff, "1");
-	            write(connfd,confirmBuff,sizeof(confirmBuff));
 	        }
 	        else
 	        {
 	        	fp = fopen(filePath,"rb");
-	            strcpy(confirmBuff, "0");
 
-	            write(connfd,confirmBuff,sizeof(confirmBuff));
 	            //Read data from file and send it
 	            while(1)
 	            {

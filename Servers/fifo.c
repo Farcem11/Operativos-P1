@@ -69,7 +69,6 @@ int main()
     char filePath[125];
     struct sockaddr_in serv_addr; 
     char sendBuff[2048];
-    char confirmBuff[32];
     unsigned char buff[256] = {0};
     socklen_t serv_len;
     char* fileNameFromBrowser = calloc(1025, sizeof(char));
@@ -97,8 +96,9 @@ int main()
     while(1)
     {
     	connfd = accept(listenfd, (struct sockaddr*)&serv_addr, &serv_len);
-    	recv(connfd, sendBuff, sizeof(sendBuff), 0);
-    	if(strcmp(getSubStringLeft(getSubStringRight(sendBuff,"/")," "), "favicon.ico") != 0)
+
+    	int readed = recv(connfd, sendBuff, sizeof(sendBuff), 0);
+    	if(readed > 0 && strcmp(getSubStringLeft(getSubStringRight(sendBuff,"/")," "), "favicon.ico") != 0)
     	{
 			if(strcmp(getSubStringLeft(sendBuff," "), "/client") != 0)
 			{
@@ -168,14 +168,11 @@ int main()
 		        if( access(filePath, F_OK) == -1 )
 		        {
 		            printf("Error opening file. File does not exist\n");
-		            strcpy(confirmBuff, "1");
-		            write(connfd,confirmBuff,sizeof(confirmBuff));
 		        }
 		        else
 		        {
 		        	fp = fopen(filePath,"rb");
-		            strcpy(confirmBuff, "0");
-		            write(connfd,confirmBuff,sizeof(confirmBuff));
+		        	
 		            //Read data from file and send it
 		            while(1)
 		            {

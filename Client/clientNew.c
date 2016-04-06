@@ -10,6 +10,10 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <ctype.h>
+#include <pthread.h>
+
+uint16_t portToUse;
+char* ipToAddress;
 
 typedef struct Array
 {
@@ -24,58 +28,6 @@ int stringToInt(char* pString);
 
 char recvBuff[1024];
 int n;
-
-int main(int argc,char *argv[])
-{
-    int sockfd = 0;
-    memset(recvBuff, '0', sizeof(recvBuff));
-    struct sockaddr_in serv_addr;
-
-    if (argc != 4)
-    {
-        printf("ERROR: The input is: ./client port ip file\n");
-        return 1;
-    }
-
-    //Create a socket first
-    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        printf("\n Error: Could not create socket \n");
-        return 1;
-    }
-    printf("%s:%d/%s\n",argv[1], stringToInt(argv[2]), argv[3]);
-    
-    uint16_t portToUse = stringToInt(argv[2]);
-    char *ipToAddress = argv[1];
-
-    //Initialize sockaddr_in data structure
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(portToUse);
-    serv_addr.sin_addr.s_addr = inet_addr(ipToAddress); //"127.0.0.1"
-
-    //Attempt a connection
-    if(connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-    {
-        printf("\n Error: Connect Failed \n");
-        return 1;
-    }
-    
-    char *fileNameRetrieve = argv[3];
-    Array* arrayFileNames = split(fileNameRetrieve, ',');
-    for (int i = 0; i < arrayFileNames->Size; i++)
-    {
-        arrayFileNames->Data[i] = TrimWhitespace(arrayFileNames->Data[i]);
-    }
-
-    for (int i = 0; i < arrayFileNames->Size; i++)
-    {
-        int result = transferenceProcess(arrayFileNames->Data[i], sockfd);
-        if (result)
-            printf("ERROR: Trasnferring wasn't successful");
-    }
-
-    return 0;
-}
 
 int count_char_in_string(char* pString, char pChar)
 {
@@ -133,54 +85,109 @@ int stringToInt(char* pString)
     return (int) strtol(pString, (char **)NULL, 10);
 }
 
-int transferenceProcess(char* fileNameToRetrieveOnServer, int socketToWork){
+void* connection_handler(void* fileNameToRetrieveOnServer)
+{
+    char* fileNameRetrieve = *(char**)fileNameToRetrieveOnServer;
+    printf("%s", "Request of file ");
+    printf("%s\n", fileNameRetrieve);
+    int n;
+    int sockfd = 0;
     int bytesReceived = 0;
-    int noFile;
-    char confirmBuff[32];
+    char* recvBuff = calloc(256, sizeof(char));
+    
+    struct sockaddr_in serv_addr;
 
+    //Create a socket first
+    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        printf("\n Error: Could not create socket \n");
+        return 0;
+    }
+
+    //Initialize sockaddr_in data structure
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(portToUse);
+    serv_addr.sin_addr.s_addr = inet_addr(ipToAddress);
+
+    //Attempt a connection
+    if(connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    {
+        printf("\n Error: Connect Failed \n");
+        return 0;
+    }
+    
     //Envia nombre del archivo
-    bzero(recvBuff,256);
-    bzero(confirmBuff,32);
     strcpy(recvBuff, "/client ");
-    printf("%s\n", fileNameToRetrieveOnServer);
-    strcat(recvBuff, fileNameToRetrieveOnServer);
+    strcat(recvBuff, fileNameRetrieve);
 
-    n = write(socketToWork,recvBuff,sizeof(recvBuff));
+    n = send(sockfd,recvBuff,strlen(recvBuff) + 1,0);
     if (n < 0) 
         printf("ERROR writing to socket");
 
+    bytesReceived = recv(sockfd, recvBuff, 256, 0);
     //Recibe confirmación
-    n = read(socketToWork,confirmBuff,31);
-    noFile = strcmp(confirmBuff,"1");
-    if (noFile == 0)
+    if(bytesReceived > 0)
     {
-        printf("File does not exist on server\n");
+        //Create file where data will be stored
+        FILE *fp = fopen(fileNameRetrieve, "wb"); 
+        if(fp == NULL)
+        {
+            printf("Error opening file");
+            return 0;
+        }
+        int totalBytes = 0;
+        //Receive data in chunks of 256 bytes
+        while(1)
+        {
+            totalBytes += bytesReceived;
+            fwrite(recvBuff, 1, bytesReceived,fp);
+            if (bytesReceived < 256)
+            {
+                break;
+            }
+            bytesReceived = recv(sockfd, recvBuff, 256, 0);
+        }
+        if(bytesReceived < 0)
+        {
+            printf("\n Read Error\n");
+        }
+        printf("Bytes received: %d\n", totalBytes);
+        fclose(fp);
+    }
+    else
+    {
+        printf("%s", fileNameRetrieve);
+        printf("%s\n", " is not in server");
+    }
+    return 0;
+}
+
+int main(int argc,char *argv[])
+{
+    int i = 0;
+
+    if (argc != 4)
+    {
+        printf("ERROR: The input is: ./client port ip file\n");
         return 1;
     }
 
-    printf("File exists on server\n");
+    char *fileNameRetrieve = argv[3];    
+    portToUse = stringToInt(argv[2]);
+    ipToAddress = argv[1];
+    
+    Array* arrayFileNames = split(fileNameRetrieve, ',');
 
-    //Create file where data will be stored
-    FILE *fp = fopen(fileNameToRetrieveOnServer, "wb"); 
-    if(fp == NULL)
+    for (i = 0; i < arrayFileNames->Size; i++)
     {
-        printf("Error opening file");
-        return 1;
+        arrayFileNames->Data[i] = TrimWhitespace(arrayFileNames->Data[i]);
+        
+        pthread_t tid;
+        if( pthread_create(&tid, NULL, connection_handler, (void*) &arrayFileNames->Data[i]) < 0)
+        {
+            perror("could not create thread");
+        }
+        pthread_join(tid, NULL);
     }
-    bzero(recvBuff,256);
-    //Receive data in chunks of 256 bytes
-    while((bytesReceived = read(socketToWork, recvBuff, 256)) > 0)
-    {
-        printf("Bytes received %d\n",bytesReceived);    
-        fwrite(recvBuff, 1,bytesReceived,fp);
-    }
-
-    if(bytesReceived < 0)
-    {
-        printf("\n Read Error\n");
-    }
-
-    fclose(fp);
-
     return 0;
 }

@@ -1,6 +1,4 @@
 //cd Documents/Operativos-P1/Servers | gcc -W -Wall -o fork fork.c | ./fork
-
-
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -75,7 +73,6 @@ int main()
     int connfd = 0;
     char filePath[125];
     char sendBuff[2048];
-    char confirmBuff[32];
     unsigned char buff[256] = {0};
 	unsigned long fileLen;
 	unsigned char* imageData = calloc(Mbs, sizeof(unsigned char));
@@ -195,26 +192,22 @@ int main()
 				        if( access(filePath, F_OK) == -1 )
 				        {
 				            printf("Error opening file. File does not exist\n");
-				            strcpy(confirmBuff, "1");
-				            write(connfd,confirmBuff,sizeof(confirmBuff));
 				        }
 				        else
 				        {
 				        	fp = fopen(filePath,"rb");
-				            strcpy(confirmBuff, "0");
 
-				            write(connfd,confirmBuff,sizeof(confirmBuff));
-				            //Read data from file and send it
+				            //Read data from file and send it				         
 				            while(1)
 				            {
 				                //First read file in chunks of 256 bytes
 				                bzero(buff,256);
-				                int nread = fread(buff,1,256,fp);        
+				                int nread = fread(buff, 1, 256, fp);        
 
 				                //If read was success, send data.
 				                if(nread > 0)
 				                {
-				                    write(connfd, buff, nread);
+				                    send(connfd, buff, nread, 0);
 				                }
 
 				                //There is something tricky going on with read .. 
@@ -233,7 +226,6 @@ int main()
 					memset(filePath, '\0', sizeof(filePath)); 
 			    }
 				memset(sendBuff, '\0', sizeof(sendBuff));
-				kill(getpid(), SIGKILL);
 				exit(0);
 				sleep(1);
 			}
@@ -245,6 +237,10 @@ int main()
 		else
 		{
 			printf("%s\n", "Fork failed");
+		}
+		if (getpid() != parent_pid)
+		{
+			kill(getpid(), SIGKILL);
 		}
 		close(connfd);
     }

@@ -1,1 +1,1 @@
-Hola mundo!
+Hola mundo, esto es un archivo de texto!
