@@ -168,7 +168,7 @@ int main(int argc,char *argv[])
 
     if (argc != 4)
     {
-        printf("ERROR: The input is: ./client port ip file\n");
+        printf("ERROR: The input is: ./client ip port file\n");
         return 1;
     }
 
