@@ -66,8 +66,13 @@ void getHttpHeaderType(char *pFileName, int* connfd)
 	}
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+	if (argc != 2){
+		printf("ERROR: The input must be ./fork port\n");
+		return 1;
+	}
+
 	int Mbs = 20*1024*1024; //20 mbs maximo
     int listenfd = 0; 
     int connfd = 0;
@@ -83,6 +88,7 @@ int main()
     struct sockaddr_in serv_addr; 
 	FILE *file;
 
+	int portToUse = atoi(argv[1]);
 
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     memset(&serv_addr, '\0', sizeof(serv_addr));
@@ -90,7 +96,7 @@ int main()
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(8000); 
+    serv_addr.sin_port = htons(portToUse); 
 
 
     printf("%s\n", "Binding socket...");
