@@ -1,4 +1,4 @@
-//Compile using gcc -W - Wall pre-thread.c -pthread -o prethread
+//Compile using gcc -W -Wall pre-thread.c -pthread -o prethread
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -220,15 +220,15 @@ void* connection_handler(void* args)
 
 int main(int argc, char *argv[])
 {
-    if (argc != 2)
+    if (argc != 3)
     {
-        printf("ERROR: Input must be like this: ./prethread numberOfThreads\n");
+        printf("ERROR: Input must be like this: ./prethread port numberOfThreads\n");
         return 1;
     }
 
     int threadCount;
 
-    numberOfThreads = stringToInt(argv[1]);
+    numberOfThreads = stringToInt(argv[2]);
     struct sockaddr_in serv_addr; 
     socklen_t serv_len;
     
