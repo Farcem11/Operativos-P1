@@ -21,6 +21,7 @@ int listenfd = 0;
 int connfd = 0;
 struct sockaddr_in serv_addr; 
 socklen_t serv_len;
+int Mbs = 20*1024*1024;
 
 char* getFileExtension(char *pFileName) 
 {
@@ -85,25 +86,33 @@ void* connection_handler(void* socket_desc)
 		fileNameFromBrowser = getSubStringLeft(fileNameFromBrowser," ");
 
 		if(strcmp(fileNameFromBrowser, "client") != 0)
-			printf("Se solicito el archivo: %s\n", fileNameFromBrowser);
+			printf("Se solicito el archivo: %s desde el browser\n", fileNameFromBrowser);
 		else
-			printf("Se solicito el archivo: %s\n", getSubStringRight(sendBuff," "));
+			printf("Se solicito el archivo: %s desde el cliente\n", getSubStringRight(sendBuff," "));
 
-		unsigned char* imageData = (unsigned char*)calloc(256, sizeof(unsigned char));
+		unsigned char* imageData = calloc(Mbs, sizeof(unsigned char));
 		char* fileNameFromClient = calloc(256, sizeof(char));
 		char filePath[125] = {0};
-		unsigned char buff[256] = {0};
-		
-		if(strcmp(getSubStringLeft(sendBuff," "), "/client") != 0)
+		FILE* file;
+		unsigned long fileLen;
+		if(strcmp(fileNameFromBrowser, "client") != 0)
 		{
 			//Browser
 			strcpy(filePath, "Files/");
 			strcat(filePath, fileNameFromBrowser);
-			FILE* file;
+			
 			if( access(filePath, F_OK) != -1 )
 			{
 				file = fopen(filePath,"rb");
+
+				fseek(file, 0, SEEK_END);
+				fileLen = ftell(file);
+				fseek(file, 0, SEEK_SET);
 				
+				fread(imageData,1,fileLen,file);
+
+				fclose(file);
+
 			  	write(connfd, "HTTP/1.1 200 OK\r\n", strlen("HTTP/1.1 200 OK\r\n"));
 			  	write(connfd, "Content-Type: ", strlen("Content-Type: "));
 				
@@ -111,32 +120,21 @@ void* connection_handler(void* socket_desc)
 			  	
 			  	write(connfd, "Connection: keep-alive", strlen("Connection: keep-alive"));
 			  	write(connfd, "\r\n\r\n", strlen("\r\n\r\n"));
-
-			  	while(1)
-	            {
-	                //First read file in chunks of 256 bytes
-	                bzero(imageData,256);
-	                int nread = fread(imageData,1,256,file);        
-
-	                //If read was success, send data.
-	                if(nread > 0)
-	                {
-	                    write(connfd, imageData, nread);
-	                }
-
-	                //There is something tricky going on with read .. 
-	                //Either there was error, or we reached end of file.
-	                if (nread < 256)
-	                {
-	                    break;
-	                }
-	            }
-				fclose(file);
+			  	write(connfd, imageData, fileLen);
 			}
 			else
 			{
+				printf("%s no esta en el server\n", fileNameFromBrowser);
 				file = fopen("Files/404.jpg","rb");
 				
+				fseek(file, 0, SEEK_END);
+				fileLen = ftell(file);
+				fseek(file, 0, SEEK_SET);
+				
+				fread(imageData,1,fileLen,file);
+
+				fclose(file);
+
 			  	write(connfd, "HTTP/1.1 200 OK\r\n", strlen("HTTP/1.1 200 OK\r\n"));
 			  	write(connfd, "Content-Type: ", strlen("Content-Type: "));
 				
@@ -144,27 +142,7 @@ void* connection_handler(void* socket_desc)
 			  	
 			  	write(connfd, "Connection: keep-alive", strlen("Connection: keep-alive"));
 			  	write(connfd, "\r\n\r\n", strlen("\r\n\r\n"));
-
-			  	while(1)
-	            {
-	                //First read file in chunks of 256 bytes
-	                bzero(imageData,256);
-	                int nread = fread(imageData,1,256,file);        
-
-	                //If read was success, send data.
-	                if(nread > 0)
-	                {
-	                    write(connfd, imageData, nread);
-	                }
-
-	                //There is something tricky going on with read .. 
-	                //Either there was error, or we reached end of file.
-	                if (nread < 256)
-	                {
-	                    break;
-	                }
-	            }
-				fclose(file);
+			  	write(connfd, imageData, fileLen);
 			}
 		}
 		else
@@ -177,40 +155,27 @@ void* connection_handler(void* socket_desc)
 	        strcat(filePath, fileNameFromClient);
 
 	        //Open the file that we wish to transfer
-	        FILE* fp;
+	        
 	        if( access(filePath, F_OK) == -1 )
 	        {
 	            printf("Error opening file. File does not exist\n");
 	        }
 	        else
 	        {
-	        	fp = fopen(filePath,"rb");
+				file = fopen(filePath,"rb");
 
-	            //Read data from file and send it
-	            while(1)
-	            {
-	                //First read file in chunks of 256 bytes
-	                bzero(buff,256);
-	                int nread = fread(buff,1,256,fp);        
+				fseek(file, 0, SEEK_END);
+				fileLen = ftell(file);
+				fseek(file, 0, SEEK_SET);
+				
+				fread(imageData,1,fileLen,file);
 
-	                //If read was success, send data.
-	                if(nread > 0)
-	                {
-	                    write(connfd, buff, nread);
-	                }
+				fclose(file);
 
-	                //There is something tricky going on with read .. 
-	                //Either there was error, or we reached end of file.
-	                if (nread < 256)
-	                {
-	                    if (ferror(fp))
-	                        printf("Error reading\n");
-	                    break;
-	                }
-	            }
-	            fclose(fp);
+			  	send(connfd, imageData, fileLen, 0);
 	        }
 		}
+		free(imageData);
     }
     close(connfd);
 	return 0;
@@ -218,29 +183,27 @@ void* connection_handler(void* socket_desc)
 
 int main()
 {
+	
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
     memset(&serv_addr, '\0', sizeof(serv_addr));
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(8000); 
+    serv_addr.sin_port = htons(8003); 
 
     printf("%s\n", "\nBinding socket...");
     while(bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) != 0);
-	printf("%s\n", "Socket binded\n"); 
+	printf("%s\n", "Socket binded, listening at port 8003\n"); 
 
-    listen(listenfd,25);
+    listen(listenfd,100);
+	pthread_t thread_id;
     
     while(1)
     {
-    	int connfd = accept(listenfd, (struct sockaddr*)&serv_addr, &serv_len);
-
-        pthread_t thread_id;
-        if( pthread_create( &thread_id , NULL ,  connection_handler , (void*) &connfd) < 0)
-        {
-            perror("could not create thread");
-        }
+	    connfd = accept(listenfd, (struct sockaddr*)&serv_addr, &serv_len);
+	    
+	    pthread_create( &thread_id , NULL ,  connection_handler , (void*) &connfd);
     }
-    return 1;
+    return 0;
 }
 

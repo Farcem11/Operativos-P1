@@ -69,7 +69,6 @@ int main()
     char filePath[125];
     struct sockaddr_in serv_addr; 
     char sendBuff[2048];
-    unsigned char buff[256] = {0};
     socklen_t serv_len;
     char* fileNameFromBrowser = calloc(1025, sizeof(char));
     char* fileNameFromClient =  calloc(1025, sizeof(char));
@@ -89,7 +88,7 @@ int main()
 
     printf("%s\n", "Binding socket...");
     while(bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) != 0);
-	printf("%s\n", "Socket binded"); 
+	printf("%s\n", "Socket binded, listening at port 8000"); 
 
     listen(listenfd, 100);
 
@@ -164,38 +163,24 @@ int main()
 		        strcat(filePath, fileNameFromClient);
 
 		        //Open the file that we wish to transfer
-		        FILE* fp;
+		        
 		        if( access(filePath, F_OK) == -1 )
 		        {
 		            printf("Error opening file. File does not exist\n");
 		        }
 		        else
 		        {
-		        	fp = fopen(filePath,"rb");
-		        	
-		            //Read data from file and send it
-		            while(1)
-		            {
-		                //First read file in chunks of 256 bytes
-		                bzero(buff,256);
-		                int nread = fread(buff,1,256,fp);
+					file = fopen(filePath,"rb");
 
-		                //If read was success, send data.
-		                if(nread > 0)
-		                {
-		                    write(connfd, buff, nread);
-		                }
+					fseek(file, 0, SEEK_END);
+					fileLen = ftell(file);
+					fseek(file, 0, SEEK_SET);
+					
+					fread(imageData,1,fileLen,file);
 
-		                //There is something tricky going on with read .. 
-		                //Either there was error, or we reached end of file.
-		                if (nread < 256)
-		                {
-		                    if (ferror(fp))
-		                        printf("Error reading\n");
-		                    break;
-		                }
-		            }
-		            fclose(fp);
+					fclose(file);
+
+				  	send(connfd, imageData, fileLen, 0);
 		        }
 			}
 			memset(imageData, '\0', Mbs);

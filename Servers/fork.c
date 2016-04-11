@@ -1,4 +1,4 @@
-//cd Documents/Operativos-P1/Servers | gcc -W -Wall -o fork fork.c | ./fork
+//gcc -W -Wall -o fork fork.c
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -73,7 +73,6 @@ int main()
     int connfd = 0;
     char filePath[125];
     char sendBuff[2048];
-    unsigned char buff[256] = {0};
 	unsigned long fileLen;
 	unsigned char* imageData = calloc(Mbs, sizeof(unsigned char));
     char* fileNameFromBrowser = calloc(1025, sizeof(char));
@@ -90,12 +89,12 @@ int main()
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_addr.sin_port = htons(8000); 
+    serv_addr.sin_port = htons(8001); 
 
 
     printf("%s\n", "Binding socket...");
     while(bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) != 0);
-	printf("%s\n", "Socket binded"); 
+	printf("%s\n", "Socket binded, listening at port 8001"); 
 
     listen(listenfd, 100);
 
@@ -188,38 +187,24 @@ int main()
 				        strcat(filePath, fileNameFromClient);
 
 				        //Open the file that we wish to transfer
-				        FILE* fp;
+				        
 				        if( access(filePath, F_OK) == -1 )
 				        {
 				            printf("Error opening file. File does not exist\n");
 				        }
 				        else
 				        {
-				        	fp = fopen(filePath,"rb");
+							file = fopen(filePath,"rb");
 
-				            //Read data from file and send it				         
-				            while(1)
-				            {
-				                //First read file in chunks of 256 bytes
-				                bzero(buff,256);
-				                int nread = fread(buff, 1, 256, fp);        
+							fseek(file, 0, SEEK_END);
+							fileLen = ftell(file);
+							fseek(file, 0, SEEK_SET);
+							
+							fread(imageData,1,fileLen,file);
 
-				                //If read was success, send data.
-				                if(nread > 0)
-				                {
-				                    send(connfd, buff, nread, 0);
-				                }
+							fclose(file);
 
-				                //There is something tricky going on with read .. 
-				                //Either there was error, or we reached end of file.
-				                if (nread < 256)
-				                {
-				                    if (ferror(fp))
-				                        printf("Error reading\n");
-				                    break;
-				                }
-				            }
-				            fclose(fp);
+						  	send(connfd, imageData, fileLen, 0);
 				        }
 					}
 	    			memset(imageData, '\0', Mbs);
