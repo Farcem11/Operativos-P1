@@ -14,6 +14,8 @@
 
 uint16_t portToUse;
 char* ipToAddress;
+unsigned long maxFileSize = 1024*1024*20;
+int chunksReaded = 2048;
 
 typedef struct Array
 {
@@ -26,7 +28,6 @@ Array* split(char* pString, char pChar);
 char* TrimWhitespace(char* str);
 int stringToInt(char* pString);
 
-char recvBuff[1024];
 int n;
 
 int count_char_in_string(char* pString, char pChar)
@@ -94,6 +95,7 @@ void* connection_handler(void* fileNameToRetrieveOnServer)
     int sockfd = 0;
     int bytesReceived = 0;
     char* recvBuff = calloc(256, sizeof(char));
+    unsigned char* fileData = calloc(20*1024*1024, sizeof(unsigned char));
     
     struct sockaddr_in serv_addr;
 
@@ -124,7 +126,7 @@ void* connection_handler(void* fileNameToRetrieveOnServer)
     if (n < 0) 
         printf("ERROR writing to socket");
 
-    bytesReceived = recv(sockfd, recvBuff, 256, 0);
+    bytesReceived = recv(sockfd, fileData, maxFileSize, 0);
     //Recibe confirmación
     if(bytesReceived > 0)
     {
@@ -136,16 +138,17 @@ void* connection_handler(void* fileNameToRetrieveOnServer)
             return 0;
         }
         int totalBytes = 0;
-        //Receive data in chunks of 256 bytes
+        //Receive data in chunks of bytes
         while(1)
         {
             totalBytes += bytesReceived;
-            fwrite(recvBuff, 1, bytesReceived,fp);
-            if (bytesReceived < 256)
+            fwrite(fileData, 1, bytesReceived, fp);
+            if (bytesReceived < chunksReaded)
             {
                 break;
             }
-            bytesReceived = recv(sockfd, recvBuff, 256, 0);
+            memset(fileData, '\0', maxFileSize);
+            bytesReceived = recv(sockfd, fileData, chunksReaded, 0);
         }
         if(bytesReceived < 0)
         {
@@ -178,16 +181,14 @@ int main(int argc,char *argv[])
     
     Array* arrayFileNames = split(fileNameRetrieve, ',');
 
+    pthread_t tid;
     for (i = 0; i < arrayFileNames->Size; i++)
     {
         arrayFileNames->Data[i] = TrimWhitespace(arrayFileNames->Data[i]);
         
-        pthread_t tid;
-        if( pthread_create(&tid, NULL, connection_handler, (void*) &arrayFileNames->Data[i]) < 0)
-        {
-            perror("could not create thread");
-        }
-        pthread_join(tid, NULL);
+        while(pthread_create(&tid, NULL, connection_handler, (void*) &arrayFileNames->Data[i]));
+
     }
+    pthread_exit(0);
     return 0;
 }
