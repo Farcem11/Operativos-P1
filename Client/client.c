@@ -162,6 +162,7 @@ void* connection_handler(void* fileNameToRetrieveOnServer)
         printf("%s", fileNameRetrieve);
         printf("%s\n", " is not in server");
     }
+    close(sockfd);
     return 0;
 }
 
@@ -187,7 +188,6 @@ int main(int argc,char *argv[])
         arrayFileNames->Data[i] = TrimWhitespace(arrayFileNames->Data[i]);
         
         while(pthread_create(&tid, NULL, connection_handler, (void*) &arrayFileNames->Data[i]));
-
     }
     pthread_exit(0);
     return 0;
